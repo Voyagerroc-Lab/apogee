@@ -198,3 +198,78 @@ test("the orphaned notifyNothingToSummarize helper is gone (#253)", () => {
     "notifyNothingToSummarize should be removed entirely now that every empty-content branch throws",
   );
 });
+
+// --- #177: re-summarizing in another format must reuse cached content ---
+//
+// Switching formats only changes the model prompt, so the extraction half is
+// avoidable when the page content is already cached.
+test("runBackgroundSummarize rejects cached-but-empty content instead of modelling it (#177)", async () => {
+  const { persistContent, getContentCacheKey } =
+    await import("../../lib/storage/pageCache.js");
+  await persistContent(TAB.url, {
+    title: "Example Article",
+    content: "",
+    type: "article",
+    isPdf: false,
+  });
+  const contentKey = await getContentCacheKey(TAB.url);
+  try {
+    await rejectsUserFacing(
+      () => runBackgroundSummarize(TAB, { notifyOnFinish: false }),
+      NOTHING_TO_SUMMARIZE_ERROR_MSG,
+      "cached empty content",
+    );
+  } finally {
+    await chrome.storage.local.remove([contentKey, "contentCacheOrder"]);
+  }
+});
+
+// Seed the content cache, break extraction entirely, and prove the run
+// still sails past it.
+test("runBackgroundSummarize reuses cached content instead of re-extracting (#177)", async () => {
+  const { persistContent, getContentCacheKey } =
+    await import("../../lib/storage/pageCache.js");
+  await persistContent(TAB.url, {
+    title: "Example Article",
+    content: "Cached extracted article text, long enough to summarize.",
+    type: "article",
+    isPdf: false,
+  });
+  const contentKey = await getContentCacheKey(TAB.url);
+
+  let extractAttempts = 0;
+  const originalSend = chrome.tabs.sendMessage;
+  const originalExec = chrome.scripting.executeScript;
+  chrome.tabs.sendMessage = async () => {
+    extractAttempts++;
+    return null;
+  };
+  chrome.scripting.executeScript = async () => {
+    extractAttempts++;
+    return [{ result: null }];
+  };
+  try {
+    let thrown;
+    try {
+      await runBackgroundSummarize(TAB, { notifyOnFinish: false });
+    } catch (err) {
+      thrown = err;
+    }
+    assert.strictEqual(
+      extractAttempts,
+      0,
+      "cached content must avoid re-extraction",
+    );
+    if (thrown) {
+      assert.notStrictEqual(
+        thrown.message,
+        COULD_NOT_READ_THIS_PAGE_ERROR_MSG,
+        "must reach the model stage, not fail at extraction",
+      );
+    }
+  } finally {
+    chrome.tabs.sendMessage = originalSend;
+    chrome.scripting.executeScript = originalExec;
+    await chrome.storage.local.remove([contentKey, "contentCacheOrder"]);
+  }
+});

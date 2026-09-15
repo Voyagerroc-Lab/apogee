@@ -69,6 +69,7 @@ import {
   hashUrl,
   persistSummaryIfAllowed,
   persistContent,
+  getCachedContent,
   shouldPersist,
   isPrivateUrl,
   CACHEABLE_PAGE_TYPES,
@@ -987,7 +988,14 @@ export async function runBackgroundSummarize(
       isPdf: false,
     };
   } else {
-    pageData = await extractFromActiveTab(tab);
+    // Reuse already-extracted content when available, so a re-summarize in
+    // another format only re-runs the model (#177).
+    const cached = await getCachedContent(tab.url);
+    if (cached && CACHEABLE_PAGE_TYPES.has(cached.type)) {
+      pageData = cached;
+    } else {
+      pageData = await extractFromActiveTab(tab);
+    }
     if (!pageData) {
       throw new UserFacingError(COULD_NOT_READ_THIS_PAGE_ERROR_MSG);
     }
@@ -1016,7 +1024,7 @@ export async function runBackgroundSummarize(
   }
 
   let content = pageData.content;
-  if (pageData.isPdf) {
+  if (pageData.isPdf && !content) {
     try {
       content = await extractPdfContent(tab);
     } catch (err) {

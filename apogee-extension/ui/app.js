@@ -1547,10 +1547,13 @@ async function summarizeActivePage() {
     const model = getModelForSettings(settings);
     currentSummaryLanguage = settings.summaryLanguage;
     currentTranslationEngine = settings.translationEngine;
-    if (tab?.url) {
-      await ensurePermissionsForUrl(tab.url);
-    }
-    const pageData = await extractFromActiveTab(tab);
+    // Reuse extracted content already in memory or the content cache, so a
+    // re-summarize in another format only re-runs the model (#177).
+    // A previous selection summary lives only in memory and is summarized
+    // through the selection path: clear it so a page summarize extracts the
+    // page itself instead of re-summarizing stale selected text.
+    if (currentPageData?.type === "selection") currentPageData = null;
+    const pageData = await getPageData(tab);
 
     if (!pageData) {
       renderError(summaryText, COULD_NOT_READ_THIS_PAGE_ERROR_MSG);
@@ -1559,13 +1562,6 @@ async function summarizeActivePage() {
     if (!pageData.isPdf && !pageData.content) {
       renderError(summaryText, NOTHING_TO_SUMMARIZE_ERROR_MSG);
       return;
-    }
-    currentPageData = pageData;
-    if (
-      CACHEABLE_PAGE_TYPES.has(pageData.type) &&
-      (await shouldPersist(tab.url))
-    ) {
-      await persistContent(tab.url, pageData);
     }
 
     const cacheKey = await getSummaryCacheKey(
@@ -1601,24 +1597,31 @@ async function summarizeActivePage() {
     let streamId, stream;
 
     if (pageData.isPdf) {
-      setLoadingIndicator(summaryText, "Extracting PDF");
-      let pdfContent;
-      try {
-        pdfContent = await extractPdfContent(tab);
-      } catch (err) {
-        const msg = err?.message || String(err);
-        if (msg.startsWith("PDF_TOO_LARGE:")) {
-          renderError(
-            summaryText,
-            "This PDF is too large to process inside the extension. Try a shorter document.",
-          );
+      // getPageData already filled the PDF text on a cache hit; extract
+      // only when it is still missing (#177).
+      let pdfContent = pageData.content;
+      if (!pdfContent) {
+        if (tab?.url) {
+          await ensurePermissionsForUrl(tab.url);
+        }
+        setLoadingIndicator(summaryText, "Extracting PDF");
+        try {
+          pdfContent = await extractPdfContent(tab);
+        } catch (err) {
+          const msg = err?.message || String(err);
+          if (msg.startsWith("PDF_TOO_LARGE:")) {
+            renderError(
+              summaryText,
+              "This PDF is too large to process inside the extension. Try a shorter document.",
+            );
+            return;
+          }
+          throw err;
+        }
+        if (!pdfContent) {
+          renderError(summaryText, COULD_NOT_EXTRACT_TEXT_FROM_PDF_ERROR_MSG);
           return;
         }
-        throw err;
-      }
-      if (!pdfContent) {
-        renderError(summaryText, COULD_NOT_EXTRACT_TEXT_FROM_PDF_ERROR_MSG);
-        return;
       }
       pageData.content = pdfContent;
       setLoadingIndicator(summaryText, randomSummarizeVerb());
