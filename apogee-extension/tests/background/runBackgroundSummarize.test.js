@@ -273,3 +273,82 @@ test("runBackgroundSummarize reuses cached content instead of re-extracting (#17
     await chrome.storage.local.remove([contentKey, "contentCacheOrder"]);
   }
 });
+
+// Full issue scenario: first run extracts and caches, second run under a
+// different format reuses the cache and only re-runs the model (#177).
+test("runBackgroundSummarize extracts once across a format switch (#177)", async () => {
+  const { getCachedContent, getContentCacheKey } =
+    await import("../../lib/storage/pageCache.js");
+  const contentKey = await getContentCacheKey(TAB.url);
+
+  let extractAttempts = 0;
+  const originalSend = chrome.tabs.sendMessage;
+  const originalExec = chrome.scripting.executeScript;
+  chrome.tabs.sendMessage = async () => {
+    extractAttempts++;
+    return {
+      title: "Example Article",
+      url: TAB.url,
+      content: "Full extracted article text, long enough to summarize.",
+      type: "article",
+      isPdf: false,
+    };
+  };
+  chrome.scripting.executeScript = async ({ func }) => {
+    extractAttempts++;
+    if (String(func).includes("__apogeeExtractorVersion")) {
+      return [{ result: chrome.runtime.getManifest().version }];
+    }
+    return [{ result: null }];
+  };
+  try {
+    try {
+      await runBackgroundSummarize(TAB, { notifyOnFinish: false });
+    } catch {
+      // Expected: default provider needs the offscreen API, absent here.
+      // What matters is the run got past extraction to the model stage.
+    }
+    assert.ok(extractAttempts > 0, "first run must extract");
+    const cached = await getCachedContent(TAB.url);
+    assert.ok(
+      cached && cached.content.includes("Full extracted article text"),
+      "first run must leave extracted content in the cache",
+    );
+
+    // Switch formats and break extraction: the second run must reuse.
+    await chrome.storage.local.set({
+      settings: { responseFormat: "paragraphs" },
+    });
+    extractAttempts = 0;
+    chrome.tabs.sendMessage = async () => {
+      extractAttempts++;
+      return null;
+    };
+    let thrown;
+    try {
+      await runBackgroundSummarize(TAB, { notifyOnFinish: false });
+    } catch (err) {
+      thrown = err;
+    }
+    assert.strictEqual(
+      extractAttempts,
+      0,
+      "second run under a new format must not re-extract",
+    );
+    if (thrown) {
+      assert.notStrictEqual(
+        thrown.message,
+        COULD_NOT_READ_THIS_PAGE_ERROR_MSG,
+        "second run must reach the model stage, not fail at extraction",
+      );
+    }
+  } finally {
+    chrome.tabs.sendMessage = originalSend;
+    chrome.scripting.executeScript = originalExec;
+    await chrome.storage.local.remove([
+      contentKey,
+      "contentCacheOrder",
+      "settings",
+    ]);
+  }
+});
