@@ -132,6 +132,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Per-engine inference locks with timeout, keep healthy engine on transient error (#268) ([6d81524](https://github.com/darshi1337/apogee/commit/6d81524ef7df3a21edb95c3a4419504e5d2aa805))
 - Keep lock-timeout timer referenced so waiters are never cancelled ([d1d4635](https://github.com/darshi1337/apogee/commit/d1d46354c721d7a50914a16cd5a2a41753fe155a))
 - Bound SW/offscreen ingress, cap map chunks and stream text (#269) ([91f8903](https://github.com/darshi1337/apogee/commit/91f89036bfa60a549806ceef21c673e03baef64f))
+- Responsive nav and reduced-motion pass (#241) ([574fc68](https://github.com/darshi1337/apogee/commit/574fc6892755720ccc0d38850308ace475072637))
 
 ### Security
 
