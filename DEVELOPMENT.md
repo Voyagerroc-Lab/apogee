@@ -32,12 +32,12 @@ This guide explains the Apogee codebase layout and repo folder structure. It cov
 
 ## Development and Build Commands
 
-Run `install:extension`, `build`, `test`, `lint`, `format`, `dev`, and `package` from the repo root or inside the `apogee-extension` directory. The rest (`format:check`, `build:chrome`, `build:firefox`, `start:firefox`, `start:chrome`, `lint:webext`) live only inside `apogee-extension/`.
+Run `install:extension`, `build`, `test`, `lint`, `format`, `build:watch`, and `package` from the repo root or inside the `apogee-extension` directory. The rest (`format:check`, `build:chrome`, `build:firefox`, `start:firefox`, `start:chrome`, `lint:webext`) live only inside `apogee-extension/`.
 
 - **Watch Mode (Development)**:
 
   ```bash
-  npm run dev
+  npm run build:watch
   ```
 
   Rebuilds both `dist/chrome` and `dist/firefox` output folders on their own whenever source files change.
