@@ -137,6 +137,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Restore Ollama connectivity for loopback variants without opening SSRF ([7727ae4](https://github.com/darshi1337/apogee/commit/7727ae434ae90af558ee377327f196a8e64d4e83))
 - Name http://[::1]/* verbatim in PRIVACY.md for the permissions-doc check ([2fb63b1](https://github.com/darshi1337/apogee/commit/2fb63b17c23091c06fc71f6a86442b7aa4260128))
 - Remove dead plaintext export, getURL fallbacks, PUA link token ([9da732e](https://github.com/darshi1337/apogee/commit/9da732e128b00addfd1b5f73a5f2d93ee0a99f70))
+- Drop dead highlight overlay, rename dev script, add coverage flag ([e2953e5](https://github.com/darshi1337/apogee/commit/e2953e5ec99c9dea86a986317e72ada417e855dd))
+- Remove unused gmail brand icon ([84b6b1c](https://github.com/darshi1337/apogee/commit/84b6b1cf22b3f1add33f7a9abece6072ae9cd39d))
 
 ### Security
 
