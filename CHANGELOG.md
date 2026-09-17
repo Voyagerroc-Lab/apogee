@@ -134,6 +134,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Bound SW/offscreen ingress, cap map chunks and stream text (#269) ([91f8903](https://github.com/darshi1337/apogee/commit/91f89036bfa60a549806ceef21c673e03baef64f))
 - Responsive nav and reduced-motion pass (#241) ([574fc68](https://github.com/darshi1337/apogee/commit/574fc6892755720ccc0d38850308ace475072637))
 - Reuse cached content when re-rendering a summary in a different format (#177) ([e85c92c](https://github.com/darshi1337/apogee/commit/e85c92cb967c5c1f2da7df02a3aad07cb8a5f057))
+- Restore Ollama connectivity for loopback variants without opening SSRF ([7727ae4](https://github.com/darshi1337/apogee/commit/7727ae434ae90af558ee377327f196a8e64d4e83))
+- Name http://[::1]/* verbatim in PRIVACY.md for the permissions-doc check ([2fb63b1](https://github.com/darshi1337/apogee/commit/2fb63b17c23091c06fc71f6a86442b7aa4260128))
 
 ### Security
 
