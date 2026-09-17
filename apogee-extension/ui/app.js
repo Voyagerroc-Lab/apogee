@@ -2790,8 +2790,20 @@ backendUrlInput?.addEventListener("change", async () => {
   }
   try {
     val = validateOllamaHost(val);
-  } catch {
-    val = DEFAULT_OLLAMA_HOST;
+  } catch (err) {
+    // Never silently swap an invalid host for the default: that hides the
+    // real address Ollama listens on. Keep the saved value and say why the
+    // typed one cannot be used.
+    const settings = await getSettings();
+    backendUrlInput.value = settings.ollamaHost;
+    renderStatusError(
+      localModelStatus,
+      `That Ollama host cannot be used (${err?.message || "invalid host"}). ` +
+        `Use an http:// loopback address such as ${DEFAULT_OLLAMA_HOST}.`,
+    );
+    const status = await checkConnection();
+    updateConnectionUI(status?.ready === true);
+    return;
   }
   backendUrlInput.value = val;
   const settings = await saveSettings({ ollamaHost: val });
@@ -2816,8 +2828,9 @@ llamaHostInput?.addEventListener("change", async () => {
   }
   try {
     // Same shared validator the service worker enforces at request time, with
-    // the llama.cpp default port — an invalid host falls back to the default
-    // instead of persisting, mirroring the Ollama handler above.
+    // the llama.cpp default port. An invalid host is reported, not persisted:
+    // silently falling back to the default hides the address the server
+    // actually listens on.
     let llamaDefaultPort = "8080";
     try {
       llamaDefaultPort = new URL(DEFAULT_LLAMACPP_HOST).port || "8080";
@@ -2828,8 +2841,16 @@ llamaHostInput?.addEventListener("change", async () => {
       label: "llama.cpp",
       defaultPort: llamaDefaultPort,
     });
-  } catch {
-    val = DEFAULT_LLAMACPP_HOST;
+  } catch (err) {
+    const settings = await getSettings();
+    llamaHostInput.value = settings.llamaHost;
+    renderStatusError(
+      llamaModelStatus,
+      `That llama.cpp URL cannot be used (${err?.message || "invalid URL"}). ` +
+        `Use an http:// loopback address such as ${DEFAULT_LLAMACPP_HOST}.`,
+    );
+    await refreshLlamaConnection();
+    return;
   }
   llamaHostInput.value = val;
   await saveSettings({ llamaHost: val });

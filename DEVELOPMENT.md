@@ -138,7 +138,7 @@ The `lib/` folder holds plain JavaScript logic split into clean functional folde
 
 ### 6. `rules/` (Declarative Net Request Security Rules)
 
-- **What it holds**: `ollama-cors.json` holds the bundled fallback declarative net request rule. It strips origin headers from local loopback requests to `127.0.0.1` and `localhost`. Where session-scoped rules exist, the service worker sets a narrower match at runtime for non-tab requests only. See `lib/util/loopbackCors.js`.
+- **What it holds**: `ollama-cors.json` holds the bundled fallback declarative net request rule. It strips origin headers from local loopback requests to `127.0.0.1`, `localhost`, and `[::1]`. Where session-scoped rules exist, the service worker sets a narrower match at runtime for non-tab requests only. See `lib/util/loopbackCors.js`.
 
 - **How to contribute**: Add or adjust declarative net request header rules to keep zero CORS friction for local loopback services.
 
