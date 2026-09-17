@@ -2407,8 +2407,7 @@ export async function summarizeMultiTab(tabsToSummarize, opts = {}) {
       if (typeof chrome !== "undefined" && chrome.notifications) {
         chrome.notifications.create("apogee-multitab-error", {
           type: "basic",
-          iconUrl:
-            chrome.runtime.getURL("assets/icon.png") || "assets/icon-48.png",
+          iconUrl: chrome.runtime.getURL("assets/icon.png"),
           title: "Apogee",
           message: "Could not extract content from the selected tab(s).",
         });
@@ -2421,7 +2420,7 @@ export async function summarizeMultiTab(tabsToSummarize, opts = {}) {
   if (typeof chrome !== "undefined" && chrome.notifications) {
     chrome.notifications.create(notificationId, {
       type: "basic",
-      iconUrl: chrome.runtime.getURL("assets/icon.png") || "assets/icon-48.png",
+      iconUrl: chrome.runtime.getURL("assets/icon.png"),
       title: "Apogee Multi-Tab Summary",
       message: `Extracting and summarizing ${extractedResults.length} selected tab(s)...`,
     });
@@ -2645,7 +2644,7 @@ export async function summarizeMultiTab(tabsToSummarize, opts = {}) {
   if (typeof chrome !== "undefined" && chrome.notifications) {
     chrome.notifications.create(`${notificationId}-ready`, {
       type: "basic",
-      iconUrl: chrome.runtime.getURL("assets/icon.png") || "assets/icon-48.png",
+      iconUrl: chrome.runtime.getURL("assets/icon.png"),
       title: "Apogee Multi-Tab Summary Ready",
       message: `Synthesized summary for ${extractedResults.length} tabs. Click to view in Apogee!`,
     });
