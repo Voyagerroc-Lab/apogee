@@ -93,7 +93,10 @@ test("injected capture function auto-tears-down on timeout and clears guard", as
   try {
     injectedOptions.func(MIN_SELECTION_LENGTH, 10);
     assert.strictEqual(fakeWin.__apogeeSelectionCapture, true);
-    assert.strictEqual(typeof fakeWin.__apogeeSelectionCaptureTeardown, "function");
+    assert.strictEqual(
+      typeof fakeWin.__apogeeSelectionCaptureTeardown,
+      "function",
+    );
     assert.ok(docListeners.selectionchange);
     assert.ok(winListeners.mouseup);
 
@@ -152,9 +155,18 @@ test("injected capture function allows re-entry and resets prior capture", async
     // Second activation without selection (re-entry)
     injectedOptions.func(MIN_SELECTION_LENGTH, 60000);
     assert.strictEqual(fakeWin.__apogeeSelectionCapture, true);
-    assert.notStrictEqual(fakeWin.__apogeeSelectionCaptureTeardown, firstTeardown);
-    assert.ok(docRemoveCount >= 1, "First doc listener should have been removed on re-entry");
-    assert.ok(winRemoveCount >= 1, "First win listener should have been removed on re-entry");
+    assert.notStrictEqual(
+      fakeWin.__apogeeSelectionCaptureTeardown,
+      firstTeardown,
+    );
+    assert.ok(
+      docRemoveCount >= 1,
+      "First doc listener should have been removed on re-entry",
+    );
+    assert.ok(
+      winRemoveCount >= 1,
+      "First win listener should have been removed on re-entry",
+    );
 
     // Clean up
     fakeWin.__apogeeSelectionCaptureTeardown();
@@ -163,4 +175,3 @@ test("injected capture function allows re-entry and resets prior capture", async
     globalThis.document = origDocument;
   }
 });
-
