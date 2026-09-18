@@ -113,6 +113,86 @@ test("injected capture function auto-tears-down on timeout and clears guard", as
   }
 });
 
+test("injected capture function sends message on valid selection and tears down", async () => {
+  let injectedOptions = null;
+  const sent = [];
+  globalThis.chrome = {
+    scripting: {
+      executeScript: async (options) => {
+        injectedOptions = options;
+      },
+    },
+  };
+
+  await activateSelectionCapture({ id: 1 });
+
+  globalThis.chrome = {
+    runtime: {
+      sendMessage: (msg) => {
+        sent.push(msg);
+      },
+    },
+  };
+
+  const docListeners = {};
+  const winListeners = {};
+  let selectionText = "short";
+  const fakeDoc = {
+    addEventListener: (type, fn) => {
+      docListeners[type] = fn;
+    },
+    removeEventListener: (type) => {
+      delete docListeners[type];
+    },
+  };
+  const fakeWin = {
+    addEventListener: (type, fn) => {
+      winListeners[type] = fn;
+    },
+    removeEventListener: (type) => {
+      delete winListeners[type];
+    },
+    getSelection: () => ({
+      toString: () => selectionText,
+    }),
+  };
+
+  const origWindow = globalThis.window;
+  const origDocument = globalThis.document;
+  globalThis.window = fakeWin;
+  globalThis.document = fakeDoc;
+
+  try {
+    injectedOptions.func(MIN_SELECTION_LENGTH, 60000);
+
+    // Short selection sends nothing and keeps capture armed
+    docListeners.selectionchange();
+    assert.strictEqual(sent.length, 0);
+    assert.strictEqual(fakeWin.__apogeeSelectionCapture, true);
+
+    // Long selection sends one message and tears down
+    selectionText = "x".repeat(MIN_SELECTION_LENGTH + 5);
+    winListeners.mouseup();
+    assert.strictEqual(sent.length, 1);
+    assert.strictEqual(sent[0].target, "service-worker");
+    assert.strictEqual(sent[0].action, "summarize-selection");
+    assert.strictEqual(
+      sent[0].payload.selectionText,
+      "x".repeat(MIN_SELECTION_LENGTH + 5),
+    );
+    assert.strictEqual(fakeWin.__apogeeSelectionCapture, undefined);
+    assert.strictEqual(docListeners.selectionchange, undefined);
+    assert.strictEqual(winListeners.mouseup, undefined);
+  } finally {
+    if (typeof fakeWin.__apogeeSelectionCaptureTeardown === "function") {
+      fakeWin.__apogeeSelectionCaptureTeardown();
+    }
+    delete globalThis.chrome;
+    globalThis.window = origWindow;
+    globalThis.document = origDocument;
+  }
+});
+
 test("injected capture function allows re-entry and resets prior capture", async () => {
   let injectedOptions = null;
   globalThis.chrome = {
@@ -148,12 +228,12 @@ test("injected capture function allows re-entry and resets prior capture", async
 
   try {
     // First activation
-    injectedOptions.func(MIN_SELECTION_LENGTH, 60000);
+    injectedOptions.func(MIN_SELECTION_LENGTH, 100);
     assert.strictEqual(fakeWin.__apogeeSelectionCapture, true);
     const firstTeardown = fakeWin.__apogeeSelectionCaptureTeardown;
 
     // Second activation without selection (re-entry)
-    injectedOptions.func(MIN_SELECTION_LENGTH, 60000);
+    injectedOptions.func(MIN_SELECTION_LENGTH, 100);
     assert.strictEqual(fakeWin.__apogeeSelectionCapture, true);
     assert.notStrictEqual(
       fakeWin.__apogeeSelectionCaptureTeardown,
@@ -171,6 +251,9 @@ test("injected capture function allows re-entry and resets prior capture", async
     // Clean up
     fakeWin.__apogeeSelectionCaptureTeardown();
   } finally {
+    if (typeof fakeWin.__apogeeSelectionCaptureTeardown === "function") {
+      fakeWin.__apogeeSelectionCaptureTeardown();
+    }
     globalThis.window = origWindow;
     globalThis.document = origDocument;
   }
